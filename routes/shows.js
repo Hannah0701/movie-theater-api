@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Show } = require('../models');
+const { check, validationResult } = require('express-validator');
 
 // GET /shows
 router.get('/', async (req, res) => {
@@ -18,7 +19,7 @@ router.get('/:id', async (req, res) => {
     };
 });
 
-// GET GET shows of a particular genre
+// GET shows of a particular genre
 router.get('/genre/:genre', async (req, res) => {
     const shows = await Show.findAll({
         where: {
@@ -29,14 +30,19 @@ router.get('/genre/:genre', async (req, res) => {
 });
 
 // PUT update rating of a show
-router.put('/:id/rating', async (req, res) => {
+router.put('/:id/rating', [check('rating').notEmpty(options = { ignore_whitespace: true }).isInt()], async (req, res) => {
+    const errors = validationResult(req);
     const show = await Show.findByPk(req.params.id);
-    if (show) {
-        show.rating = req.body.rating;
-        await show.save();
-        res.json(show);
+    if (errors.isEmpty()) {
+        if (show) {
+            show.rating = req.body.rating;
+            await show.save();
+            res.json(show);
+        } else {
+            res.status(404).send('Not found');
+        };
     } else {
-        res.status(404).send('Not found');
+        res.status(400).json({ errors: errors.array() });
     };
 });
 
